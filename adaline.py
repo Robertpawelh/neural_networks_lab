@@ -1,8 +1,8 @@
 import numpy as np
 from utils import load_data, print_data
+from model import Model
 
-
-class Adaline:
+class Adaline(Model):
     def __init__(self,
                  n_inputs,
                  weight_min=-1,
@@ -14,34 +14,11 @@ class Adaline:
                  max_epochs=1000,
                  debug=False,
                  verbose=True):
-        self.n_inputs = n_inputs
-        self.weight_min = weight_min
-        self.weight_max = weight_max
-        self.start_weight_min = start_weight_min
-        self.start_weight_max = start_weight_max
+        Model.__init__(self, n_inputs, weight_min, weight_max, start_weight_min, start_weight_max, max_epochs, debug, verbose)
         self.max_acceptable_error = max_acceptable_error
-        self.max_epochs = max_epochs
         self.learning_rate = learning_rate
-        self.debug = debug
-        self.verbose = verbose
 
         self.weights = np.zeros(n_inputs + 1)
-
-    def reset_weights(self):
-        n_weights = self.n_inputs + 1
-        self.weights = np.random.uniform(self.start_weight_min, self.start_weight_max, n_weights)
-
-    def fix_weights_range(self):
-        self.weights = self.weights.clip(self.weight_min, self.weight_max)
-
-    def calculate_z(self, neuron_values):
-        return self.weights.T @ neuron_values
-
-    def calculate_bipolar_output(self, z):
-        return 1 if z > 0 else -1
-
-    def calculate_unipolar_output(self, z):
-        return 1 if z > 0 else 0
 
     def activation_function(self, z):
         return self.calculate_bipolar_output(z)

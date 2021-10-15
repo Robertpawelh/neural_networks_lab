@@ -1,9 +1,10 @@
 import numpy as np
 import pandas as pd
+from model import Model
 from utils import load_data, print_data
 
 
-class Perceptron:
+class Perceptron(Model):
     def __init__(self,
                  n_inputs,
                  weight_min=-1,
@@ -17,33 +18,17 @@ class Perceptron:
                  activation_function='unipolar',
                  debug=False,
                  verbose=True):
-        self.n_inputs = n_inputs
-        self.weight_min = weight_min
-        self.weight_max = weight_max
-        self.start_weight_min = start_weight_min
-        self.start_weight_max = start_weight_max
-        self.max_epochs = max_epochs
+        Model.__init__(self, n_inputs, weight_min, weight_max, start_weight_min, start_weight_max, max_epochs, debug, verbose)
         self.threshold = threshold
         self.learning_rate = learning_rate
         self.activation_function = activation_function
         self.use_bias = use_bias
-        self.debug = debug
-        self.verbose = verbose
 
         self.weights = np.zeros(n_inputs + 1 if use_bias else n_inputs)
 
     def reset_weights(self):
         n_weights = self.n_inputs + 1 if self.use_bias else self.n_inputs
         self.weights = np.random.uniform(self.start_weight_min, self.start_weight_max, n_weights)
-
-    def fix_weights_range(self):
-        self.weights = self.weights.clip(self.weight_min, self.weight_max)
-
-    def calculate_z(self, neuron_values):
-        if self.debug:
-            print(f'Z dla: {self.weights} i {neuron_values}: ')
-            print(f'{neuron_values.T @ self.weights}')
-        return neuron_values.T @ self.weights
 
     def calculate_unipolar_output(self, z):
         threshold = 0 if self.use_bias else self.threshold
