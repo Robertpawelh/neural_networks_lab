@@ -20,7 +20,7 @@ class Adaline(Model):
 
         self.weights = np.zeros(n_inputs + 1)
 
-    def activation_function(self, z):
+    def calculate_neuron_output(self, z):
         return self.calculate_bipolar_output(z)
 
     def calculate_loss(self, Y_train, z):
@@ -33,7 +33,7 @@ class Adaline(Model):
         z = self.calculate_z(X_train)
         loss = self.calculate_loss(Y_train, z)
         self.weights = self.weights - self.learning_rate * self.calculate_loss_gradient(loss, X_train)
-        self.fix_weights_range()
+        self.fix_weights_to_keep_range()
 
         return loss**2
 
@@ -61,7 +61,7 @@ class Adaline(Model):
     def predict(self, X):
         X = np.insert(X, 0, 1, axis=0)
         z = self.calculate_z(X)
-        Y_pred = self.activation_function(z)
+        Y_pred = self.calculate_neuron_output(z)
         return Y_pred
 
 

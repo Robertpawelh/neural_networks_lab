@@ -26,7 +26,7 @@ class Model(ABC):
         n_weights = self.n_inputs + 1
         self.weights = np.random.uniform(self.start_weight_min, self.start_weight_max, n_weights)
 
-    def fix_weights_range(self):
+    def fix_weights_to_keep_range(self):
         self.weights = self.weights.clip(self.weight_min, self.weight_max)
 
     def calculate_z(self, neuron_values):

@@ -38,7 +38,7 @@ class Perceptron(Model):
         threshold = 0 if self.use_bias else self.threshold
         return 1 if z > threshold else -1
 
-    def calculate_output(self, z):
+    def calculate_neuron_output(self, z):
         if self.activation_function == 'bipolar':
             return self.calculate_bipolar_output(z)
         elif self.activation_function == 'unipolar':
@@ -57,7 +57,7 @@ class Perceptron(Model):
     def update_weights(self, loss, X_train):
         weights_increase = self.calculate_weights_increase(loss, X_train)
         self.weights = self.weights + self.learning_rate * weights_increase
-        self.fix_weights_range()
+        self.fix_weights_to_keep_range()
 
     def fit(self, X_train, Y_train):
         self.reset_weights()
@@ -76,7 +76,7 @@ class Perceptron(Model):
                 X = X_train[i]
                 Y = Y_train[i]
                 z = self.calculate_z(X)
-                Y_pred = self.calculate_output(z)
+                Y_pred = self.calculate_neuron_output(z)
                 loss = self.calculate_loss(Y_pred, Y)
                 self.update_weights(loss, X)
                 if np.any(loss):
@@ -91,7 +91,7 @@ class Perceptron(Model):
         if self.use_bias:
             X = np.insert(X, 0, 1, axis=0)
         z = self.calculate_z(X)
-        Y_pred = self.calculate_output(z)
+        Y_pred = self.calculate_neuron_output(z)
         return Y_pred
 
 
