@@ -193,7 +193,7 @@ def run_research_3(X_train, X_val, Y_train, Y_val):
                   )
     
 def run_research_4(X_train, X_val, Y_train, Y_val):
-    sigma_values = [0, 0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 3.0]
+    sigma_values = list(np.arange(0, 1.1, 0.1))
 
     architecture = [
         {'layer_dim': 784 },
@@ -218,14 +218,17 @@ if __name__ == '__main__':
     #run_research_1(X_train, X_val, Y_train, Y_val, 'relu')
     
     """Badanie 1_2"""
-    #hidden_layer_sizes = list(range(100, 500, 100))
-    #run_research_1(X_train, X_val, Y_train, Y_val, 'tanh', hidden_layer_sizes)
+    hidden_layer_sizes = list(range(100, 500, 50))
+    run_research_1(X_train, X_val, Y_train, Y_val, 'tanh', hidden_layer_sizes)
     
     """ BADANIE 2 """
     # run_research_2(X_train, X_val, Y_train, Y_val)
     
     """ BADANIE 3 """
-    run_research_3(X_train, X_val, Y_train, Y_val)
+    # run_research_3(X_train, X_val, Y_train, Y_val)
     
     """ BADANIE 4 """
-    # run_research_4(X_train, X_val, Y_train, Y_val)
+    run_research_4(X_train, X_val, Y_train, Y_val)
+    
+    """ Badanie dodatkowe """ 
+    run_research_1(X_train, X_val, Y_train, Y_val, 'relu', hidden_layer_sizes)
