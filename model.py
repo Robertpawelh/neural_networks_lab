@@ -29,11 +29,11 @@ class Model(ABC):
     def fix_weights_to_keep_range(self):
         self.weights = self.weights.clip(self.weight_min, self.weight_max)
 
-    def calculate_z(self, neuron_values):
+    def calculate_z(self, neuron_values, weights):
         if self.debug:
-            print(f'Z dla: {self.weights} i {neuron_values}: ')
-            print(f'{neuron_values.T @ self.weights}')
-        return neuron_values.T @ self.weights
+            print(f'Z dla: {weights} i {neuron_values}: ')
+            print(f'{neuron_values.T @ weights}')
+        return neuron_values.T @ weights
 
     def calculate_bipolar_output(self, z):
         return 1 if z > 0 else -1

@@ -75,7 +75,7 @@ class Perceptron(Model):
             for i in range(0, data_len):
                 X = X_train[i]
                 Y = Y_train[i]
-                z = self.calculate_z(X)
+                z = self.calculate_z(X, self.weights)
                 Y_pred = self.calculate_neuron_output(z)
                 loss = self.calculate_loss(Y_pred, Y)
                 self.update_weights(loss, X)
@@ -84,13 +84,13 @@ class Perceptron(Model):
 
             if self.verbose:
                 print(f'Global loss after {epochs} epochs: {global_loss_counter}')
-
+        print(self.weights)
         return epochs
 
     def predict(self, X):
         if self.use_bias:
             X = np.insert(X, 0, 1, axis=0)
-        z = self.calculate_z(X)
+        z = self.calculate_z(X, self.weights)
         Y_pred = self.calculate_neuron_output(z)
         return Y_pred
 
