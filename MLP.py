@@ -56,13 +56,15 @@ class MLP():
             self.activations.append(activation)
 
             index += 1
+        
+        self.fix_parameters_to_keep_range()
     
     def fix_parameters_to_keep_range(self):
-        for weights in self.weights:
-            weights = weights.clip(self.weight_min, self.weight_max)
+        for index, weights in enumerate(self.weights):
+            self.weights[index] = weights.clip(self.weight_min, self.weight_max)
         
-        for biases in self.biases:
-            biases = biases.clip(self.weight_min, self.weight_max)
+        for index, biases in enumerate(self.biases):
+            self.biases[index] = biases.clip(self.weight_min, self.weight_max)
 
     def calculate_z(self, neuron_values, weights, bias):
         if self.debug:
