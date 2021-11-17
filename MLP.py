@@ -1,7 +1,10 @@
-import numpy as np 
-from utils import load_mnist_data, print_data
-from sklearn.metrics import accuracy_score
+import numpy as np
+import time
+from numpy.core.numeric import full 
+from utils import load_mnist_data, scale_min_max_data, print_data
+from metrics import accuracy_score, classification_error
 from sklearn.model_selection import train_test_split
+from operator import attrgetter
 
 class MLP():
     def __init__(self,
@@ -9,7 +12,9 @@ class MLP():
                  max_epochs = 10,
                  sigma = 0.1,
                  max_acceptable_error = 0.01,
-                 batch_size = 1,
+                 max_acceptable_val_error_diff = 0.1,
+                 max_training_time = 600,
+                 batch_size = None,
                  weight_min = -1,
                  weight_max = 1,
                  debug = False,
@@ -19,6 +24,8 @@ class MLP():
         self.sigma = sigma
         self.max_epochs = max_epochs
         self.max_acceptable_error = max_acceptable_error
+        self.max_acceptable_val_error_diff = max_acceptable_val_error_diff
+        self.max_training_time = max_training_time
         self.batch_size = batch_size
 
         self.weight_min = weight_min
@@ -59,8 +66,8 @@ class MLP():
 
     def calculate_z(self, neuron_values, weights, bias):
         if self.debug:
-            print('W: ', weights.shape)
             print('X: ', neuron_values.shape)
+            print('W: ', weights.shape)
             print('B: ', bias.shape)
 
         return (neuron_values.T @ weights + bias).T 
@@ -83,11 +90,11 @@ class MLP():
         return softmax
 
     def softmax_gradient(self, y, a):
-        y = y.reshape((len(y), 1))
         return -(y - a)
 
     def activation_function(self, z, activation_func):
-        z = np.clip(z, -188.72, 188.72) #np.clip(z, -709.78, 709.78)
+        z = np.clip(z, -709.78, 709.78)
+        
         if self.debug:
             print(activation_func, 'activated')
 
@@ -114,13 +121,10 @@ class MLP():
     def relu_derivative(self, neuron_values, index):
         z = neuron_values[index]['z']
         return np.greater(z, 0).astype(int)
-        
-        #return self.softplus_derivative(neuron_values, index)
 
     def tanh_derivative(self, neuron_values, index):
         tanh = neuron_values[index]['a']
         return (1 - tanh ** 2)
-
 
     def derivative(self, neuron_values, index, activation_func):
         if self.debug:
@@ -136,42 +140,50 @@ class MLP():
             raise Exception('Activation function currently is not implemented')
 
     def loss_function(self, Y_pred, Y_train):
-        return Y_train @ -np.log(Y_pred)
+        Y_train = Y_train.reshape((Y_train.shape[0], 1, Y_train.shape[1]))
+        Y_pred = Y_pred.reshape((Y_pred.shape[0], Y_pred.shape[1], 1))
+
+        return (Y_train @ -np.log(Y_pred))
 
     def feed_forward(self, X):
-        X = X.reshape((len(X), 1))
-        neuron_values = [ {'a': X} ]
+        neuron_values = [ {'a': X.T} ]
 
         for index in range(len(self.weights)):
             z = self.calculate_z(neuron_values[-1]['a'], self.weights[index], self.biases[index])
             a = self.activation_function(z, self.activations[index])
             neuron_values.append({'a': a, 'z': z})
 
-        return neuron_values[-1]['a'], neuron_values
+        return neuron_values[-1]['a'].T, neuron_values
 
-    def gradient_descent(self, n_samples, neuron_values, gradient_values):
+    def gradient_descent(self, neuron_values, gradient_values):
         gradient_values = gradient_values[::-1]
         for index in range(len(self.weights) - 1, -1, -1):
-            weight_grad = gradient_values[index]
-            #print(self.weights[index].shape)
-            #print(neuron_values[index]['a'].shape)
-            #print(weight_grad.shape)
-            self.weights[index] = self.weights[index] - (self.learning_rate/n_samples) * (neuron_values[index]['a'] * weight_grad.T)
-            self.biases[index] = self.biases[index] - (self.learning_rate/n_samples)  * weight_grad.T
+            grad = gradient_values[index]
+            n_samples = grad.shape[0]
+            a = neuron_values[index]['a']
+            
+            a = np.expand_dims(a.T, axis=1)
 
+            grad_sum = np.sum((grad @ a), axis=0).T
+            bias_grad = np.sum(grad, axis=0).T
+
+            self.weights[index] = self.weights[index] - (self.learning_rate/n_samples) * grad_sum
+            self.biases[index] = self.biases[index] - (self.learning_rate/n_samples) * bias_grad
+
+    def update_weights(self, neuron_values, gradient_values):
+        self.gradient_descent(neuron_values, gradient_values)
         self.fix_parameters_to_keep_range()
 
-    def update_weights(self, n_samples, neuron_values, gradient_values):
-        self.gradient_descent(n_samples, neuron_values, gradient_values)
-
     def single_layer_backpropagation(self, neuron_values, index, curr_activation, next_loss, next_weight):
-        a = neuron_values[index - 1]['a'].T
-        loss = ((next_weight @ next_loss) * (self.derivative(neuron_values, index, curr_activation)))
+        derivative = self.derivative(neuron_values, index, curr_activation)
+        derivative = np.expand_dims(derivative, axis=0).T
 
+        loss = ((next_weight @ next_loss) * (derivative))
         return loss
 
     def backward_propagation(self, Y_pred, Y, neuron_values):
         loss = self.softmax_gradient(Y, Y_pred)
+        loss = np.expand_dims(loss, axis=2)
         gradient_values = [ loss ]
 
         for index in range(len(self.weights) - 2, -1, -1):
@@ -180,59 +192,88 @@ class MLP():
 
         return gradient_values
 
+    def shuffle_dset(self, X_train, Y_train):
+        p = np.random.permutation(len(X_train))
+        X_train = X_train[p]
+        Y_train = Y_train[p]
+        
+        return X_train, Y_train
+        
     def fit(self, X_train, Y_train, X_val=None, Y_val=None):
         full_data_len = len(Y_train)
         val_data_len = len(Y_val) if Y_val is not None else 0
+        batch_size = self.batch_size if self.batch_size is not None else full_data_len
 
         epochs = 0
+        training_start_time = time.time()
+        current_training_time = 0
         global_error = np.inf
-
         batch_start = 0
-
         previous_parameters = []
 
         while self.max_acceptable_error < global_error and epochs < self.max_epochs:
             epochs += 1
             loss_sum = 0
             
+            X_train, Y_train = self.shuffle_dset(X_train, Y_train)
             batch_start = 0
-
+            batch_end = min(batch_start + batch_size, full_data_len)
+            
             while batch_start < full_data_len:
-                batch_end = min(batch_start + self.batch_size, full_data_len)
-                for i in range(batch_start, batch_end):
-                    X = X_train[i]
-                    Y = Y_train[i]
-                    Y_pred, neuron_values = self.feed_forward(X)
-                    gradient_values = self.backward_propagation(Y_pred, Y, neuron_values)
-                    loss_sum += self.loss_function(Y_pred, Y)
+                batch_end = min(batch_start + batch_size, full_data_len)
+                X_batch = X_train[batch_start:batch_end]
+                Y_batch = Y_train[batch_start:batch_end]
+                Y_pred, neuron_values = self.feed_forward(X_batch)
+                gradient_values = self.backward_propagation(Y_pred, Y_batch, neuron_values)
 
-                    # czy to nie powinno byc po batchu
-                    self.update_weights(batch_end - batch_start, neuron_values, gradient_values)
-        
-                batch_start = batch_end
+                loss_sum += np.sum(self.loss_function(Y_pred, Y_batch))#, axis=0)
+                self.update_weights(neuron_values, gradient_values)
+    
+                batch_start = batch_end + 1
 
+            current_training_time = time.time() - training_start_time
+            
             global_error = (1/full_data_len) * loss_sum
             if self.verbose:
-                print(f'Global loss after {epochs} epochs: {global_error}')
+                # Y_pred = np.argmax(self.predict(X_train), axis=1)
+                # Y_test = np.argmax(Y_train, axis=1)
+                # print(f'Global accuracy score after {epochs}: {accuracy_score(Y_pred, Y_test)}')
+                # print(f'Global classification loss after {epochs} epochs: {classification_error(Y_pred, Y_test)}')
+                print(f'Global loss after {epochs} epochs: {global_error}. ', end='')
             
             if X_val is not None and Y_val is not None:
                 loss_sum = 0
-                for i in range(val_data_len):
-                    X = X_val[i]
-                    Y = Y_val[i]
-                    Y_pred, _ = self.feed_forward(X) 
-                    loss_sum += self.loss_function(Y_pred, Y)
-
+ 
+                Y_pred, _ = self.feed_forward(X_val) 
+                loss_sum = np.sum(self.loss_function(Y_pred, Y_val))
                 val_error = (1/val_data_len) * loss_sum
+                
+                if self.verbose:
+                    print(f'Loss on validation: {val_error}', end='')
+                
+                if previous_parameters:
+                    if (val_error > previous_parameters[-1]['val_error'] and val_error - global_error > self.max_acceptable_val_error_diff):
+                        min_error_params = sorted(previous_parameters, key = lambda x: x['val_error'])[0]
+
+                        self.weights = min_error_params['weights']
+                        self.biases = min_error_params['biases']
+                        
+                        if self.verbose:
+                            print()
+                        return epochs, current_training_time
+                
                 parameters = { 'val_error': val_error, 'weights': [weight.copy() for weight in self.weights], 'biases': [bias.copy() for bias in self.biases]}
                 previous_parameters.append(parameters)
-
-                if self.verbose:
-                    print(f'Loss on validation dset after {epochs} epochs: {val_error}')
             
-
+            if current_training_time > self.max_training_time:
+                if self.verbose:
+                    print()
+                return epochs, current_training_time
+            
+            if self.verbose:
+                print()
         
-        return epochs
+        return epochs, current_training_time
 
     def predict(self, X):
         result, _ = self.feed_forward(X)
@@ -243,16 +284,13 @@ class MLP():
             raise Exception('Model was not initialized')
 
         with open(filepath, 'w') as f:
-            #f.write('n_layers\n')
             for weight in self.weights:
                 f.write(f'{weight.shape[0]}\t')
 
             f.write(f'{self.weights[-1].shape[1]}\t')
-            #f.write('activations\n')
             f.write('\n')
             for activation in self.activations:
                 f.write(f'{activation}\t')
-            #f.write('weights\n')
             f.write('\n')
             for weight in self.weights:
                 for row in weight:
@@ -260,24 +298,19 @@ class MLP():
                         f.write(f'{value} ')
                     f.write('\t')
                 f.write('\n')
-                #f.write('\n')
-
+                
             for bias in self.biases:
                 for row in bias:
                     for value in row:
                         f.write(f'{value} ')
                     f.write('\t')
                 f.write('\n')
-                #f.write('\n')
-
-
 
     def load_model(self, filepath):
         with open(filepath, 'r') as f:
             parameters_values = []
             weights = []
             biases = []
-            #lines = f.readlines()
             layers_dims = [int(val) for val in f.readline().strip().split('\t')]
             activations = f.readline().strip().split('\t')
 
@@ -306,19 +339,22 @@ class MLP():
                 parameters_values.append(values)
 
             self.init_layers(architecture, parameters_values)
-
-        
     
 
 if __name__ == '__main__':
     X_train, Y_train = load_mnist_data('train-images.idx3-ubyte', 'train-labels.idx1-ubyte', flatten=True)#('AND_bi_train_dset.csv')
+    X_train = scale_min_max_data(X_train)
+
+    print(X_train.shape, Y_train.shape)
     n_outputs = len(np.unique(Y_train))
     Y_train = np.eye(n_outputs)[Y_train]
-    # print_data(X_train, Y_train)
-    model = MLP(learning_rate = 0.05,
-                 max_epochs = 20,
+
+    model = MLP(learning_rate = 0.01,
+                 max_epochs = 100,
                  sigma = 0.1,
-                 max_acceptable_error = 0.15,
+                 max_acceptable_error = 0.001,
+                 max_acceptable_val_error_diff = 0.1,
+                 max_training_time = 60,
                  batch_size = 100,
                  debug = False,
                  verbose = True
@@ -326,25 +362,19 @@ if __name__ == '__main__':
 
     architecture = [
         {'layer_dim': X_train.shape[1] },
-        {'layer_dim': 30, 'activation': 'tanh'},
-        {'layer_dim': 100, 'activation': 'sigmoid'},
+        {'layer_dim': 10, 'activation': 'relu'},
         {'layer_dim': n_outputs, 'activation': 'softmax'}
     ]
-    X_train = X_train[0:5000]
-    Y_train = Y_train[0:5000]
 
     X_train, X_val, Y_train, Y_val = train_test_split(X_train, Y_train, test_size=0.15)
 
     model.init_layers(architecture)
-    model.fit(X_train, Y_train)#, X_val, Y_val)
-
+    epochs, training_time = model.fit(X_train, Y_train, X_val, Y_val)
+    print(f'Trained after {epochs} epochs and {training_time} time')
 
     X_test, Y_test = load_mnist_data('t10k-images.idx3-ubyte', 't10k-labels.idx1-ubyte', flatten=True)
-    Y_pred = []
+    X_test = scale_min_max_data(X_test)
 
-    for index, X in enumerate(X_test):
-        prediction = model.predict(X)
-        #print(prediction)
-        Y_pred.append(np.argmax(prediction))
+    Y_pred = np.argmax(model.predict(X_test), axis=1)
 
     print('Accuracy score: ', accuracy_score(Y_pred, Y_test))

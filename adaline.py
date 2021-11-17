@@ -30,7 +30,7 @@ class Adaline(Model):
         return - 2 * loss * X_train
 
     def update_weights(self, X_train, Y_train):
-        z = self.calculate_z(X_train)
+        z = self.calculate_z(X_train, self.weights)
         loss = self.calculate_loss(Y_train, z)
         self.weights = self.weights - self.learning_rate * self.calculate_loss_gradient(loss, X_train)
         self.fix_weights_to_keep_range()
@@ -57,10 +57,12 @@ class Adaline(Model):
             global_error = (1/data_len) * loss_sum
             if self.verbose:
                 print(f'Global loss after {epochs} epochs: {global_error}')
+        
+        return epochs
 
     def predict(self, X):
         X = np.insert(X, 0, 1, axis=0)
-        z = self.calculate_z(X)
+        z = self.calculate_z(X, self.weights)
         Y_pred = self.calculate_neuron_output(z)
         return Y_pred
 
@@ -70,7 +72,7 @@ if __name__ == '__main__':
     print_data(X_train, Y_train)
     model = Adaline(n_inputs=2,
                     learning_rate=0.01,
-                    max_acceptable_error=0.15,
+                    max_acceptable_error=0.3,
                     max_epochs=100,
                     start_weight_min=-0.1,
                     start_weight_max=0.1)
