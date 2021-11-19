@@ -17,7 +17,7 @@ MAX_EPOCHS = 100
 MAX_ACCEPTABLE_ERROR = 0.001
 MAX_ACCEPTABLE_VAL_ERROR_DIFF = 0.1
 MAX_TRAINING_TIME = 3600
-DSET_SIZE = 10000
+DSET_SIZE = 60000
 
 def get_datasets(val_dset_size):
     X_train, Y_train = load_mnist_data('train-images.idx3-ubyte', 'train-labels.idx1-ubyte', flatten=True)
@@ -73,7 +73,7 @@ def run_experiments(X_train, X_val, Y_train, Y_val,
         
         return epochs, accuracy, training_time
 
-    results = Parallel(n_jobs=int(repetitions/2))(delayed(run_exp)() for i in range(repetitions))
+    results = Parallel(n_jobs=int(repetitions))(delayed(run_exp)() for i in range(repetitions))
 
     epochs, accuracies, exec_times = list(map(list, zip(*results)))
     #print(epochs)
@@ -105,13 +105,10 @@ def run_exp_group(params_values, run_exp_function, exp_label, filename, plot_tit
     plt.title((f'Zależność trafności klasyfikacji od {plot_title}'))
     plt.xlabel(x_label)
     plt.ylabel('Trafność klasyfikacji')
-    #print(len(x_data), len(accuracy_list), len(error_list))
     plt.errorbar(x_data, accuracy_list[::-1], error_list[::-1], fmt='o', markersize=4, capsize=4)
     if x_log_scale:
         plt.xscale('log')
     
-    #plt.yticks(np.arange(0, 100, 20))
-    #plt.ylim(0.9, 1)
     plt.savefig(f'results/{filename}_acc.png', bbox_inches='tight')
     plt.clf()
     plt.cla()
@@ -211,25 +208,22 @@ def run_research_4(X_train, X_val, Y_train, Y_val):
                   'Wartość parametru sigma',
                   )
 
-
 if __name__ == '__main__':
     X_train, X_val, Y_train, Y_val, X_test, Y_test = get_datasets(0.15)
     
     """BADANIE 1 """
-    #run_research_1(X_train, X_val, Y_train, Y_val, 'relu')
+    run_research_1(X_train, X_val, Y_train, Y_val, 'relu')
     
     """Badanie 1_2"""
-    #hidden_layer_sizes = list(range(100, 500, 50))
-    #run_research_1(X_train, X_val, Y_train, Y_val, 'tanh', hidden_layer_sizes)
+    hidden_layer_sizes = list(range(100, 500, 50))
+    run_research_1(X_train, X_val, Y_train, Y_val, 'tanh', hidden_layer_sizes)
     
     """ BADANIE 2 """
-    # run_research_2(X_train, X_val, Y_train, Y_val)
+    run_research_2(X_train, X_val, Y_train, Y_val)
     
     """ BADANIE 3 """
     run_research_3(X_train, X_val, Y_train, Y_val)
     
     """ BADANIE 4 """
-    #run_research_4(X_train, X_val, Y_train, Y_val)
+    run_research_4(X_train, X_val, Y_train, Y_val)
     
-    """ Badanie dodatkowe """ 
-    #run_research_1(X_train, X_val, Y_train, Y_val, 'relu', hidden_layer_sizes)
