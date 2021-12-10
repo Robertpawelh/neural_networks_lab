@@ -80,8 +80,8 @@ class MomentumOptimizer(Optimizer):
             weight_update, bias_update = self.calculate_update_from_grad(gradient_values[index], neuron_values[index])
 
             if self.last_epoch_weights_update is not None and self.last_epoch_biases_update is not None:
-                weight_update = -(self.learning_rate * weight_update) + (self.momentum_rate * self.last_epoch_weights_update[index])
-                bias_update = -(self.learning_rate * bias_update) + (self.momentum_rate * self.last_epoch_biases_update[index])
+                weight_update = (self.momentum_rate * self.last_epoch_weights_update[index]) - (self.learning_rate * weight_update)
+                bias_update = (self.momentum_rate * self.last_epoch_biases_update[index]) - (self.learning_rate * bias_update)
             else:
                 weight_update = -self.learning_rate * weight_update
                 bias_update = -self.learning_rate * bias_update
@@ -96,7 +96,7 @@ class MomentumOptimizer(Optimizer):
         
         return updated_weights, updated_biases
     
-class NesterovMomentumOptimizer(Optimizer): # NOT IMPLEMENTED
+class NesterovMomentumOptimizer(Optimizer):
     def __init__(self, learning_rate, momentum_rate):
         self.learning_rate = learning_rate
         self.momentum_rate = momentum_rate
@@ -133,20 +133,23 @@ class NesterovMomentumOptimizer(Optimizer): # NOT IMPLEMENTED
             weight_update, bias_update = self.calculate_update_from_grad(gradient_values[index], neuron_values[index])
 
             if self.last_epoch_weights_update is not None and self.last_epoch_biases_update is not None:
-                weight_update = -(self.learning_rate * weight_update) + (self.momentum_rate * self.last_epoch_weights_update[index])
-                bias_update = -(self.learning_rate * bias_update) + (self.momentum_rate * self.last_epoch_biases_update[index])
+                weight_update = (self.momentum_rate * self.last_epoch_weights_update[index]) - (self.learning_rate * weight_update)
+                bias_update = (self.momentum_rate * self.last_epoch_biases_update[index]) - (self.learning_rate * bias_update)
+                
+                self.last_weights_update[index] += weight_update
+                self.last_biases_update[index] += bias_update
                 
                 weight_update = -(self.momentum_rate) * self.last_epoch_weights_update[index] + (1 + self.momentum_rate) * weight_update
                 bias_update = -(self.momentum_rate) * self.last_epoch_biases_update[index] + (1 + self.momentum_rate) * bias_update
             else:
                 weight_update = -self.learning_rate * weight_update
                 bias_update = -self.learning_rate * bias_update
+                
+                self.last_weights_update[index] += weight_update
+                self.last_biases_update[index] += bias_update
                             
             updated_weights[index] = weights[index] + weight_update
             updated_biases[index] = biases[index] + bias_update
-                
-            self.last_weights_update[index] += weight_update#updated_weights[index]
-            self.last_biases_update[index] += bias_update#updated_biases[index]
             
         self.n_samples += 1#gradient_values[len(weights) - 1].shape[0]
         
@@ -214,29 +217,11 @@ class AdadeltaOptimizer(Optimizer):
         self.learning_rate = learning_rate
         self.epsilon = epsilon
         
-        self.last_epoch_weights_grad_cache = None
-        self.last_epoch_biases_grad_cache = None
         self.last_weights_grad_cache = None
         self.last_biases_grad_cache = None
-        
-        self.n_samples = 0
     
     def on_epoch_end(self):
-        if self.last_epoch_weights_grad_cache is None or self.last_epoch_biases_grad_cache is None:
-            self.last_epoch_weights_grad_cache = [None] * len(self.last_weights_grad_cache)
-            self.last_epoch_biases_grad_cache = [None] * len(self.last_biases_grad_cache)
-            for index, x in enumerate(self.last_weights_grad_cache):
-                self.last_epoch_weights_grad_cache[index] = np.zeros(shape=self.last_weights_grad_cache[index].shape)
-                self.last_epoch_biases_grad_cache[index] = np.zeros(shape=self.last_biases_grad_cache[index].shape)
-                print(self.last_epoch_weights_grad_cache[index].shape, self.last_weights_grad_cache[index].shape)
-        
-        for index, x in enumerate(self.last_weights_grad_cache):
-            self.last_epoch_weights_grad_cache[index] += self.last_weights_grad_cache[index]
-            self.last_epoch_biases_grad_cache[index] += self.last_biases_grad_cache[index]
-        self.last_weights_grad_cache = None
-        self.last_biases_grad_cache = None
-        
-        self.n_samples = 0
+        pass
         
     def get_updated_parameters(self, weights, biases, neuron_values, gradient_values):
         gradient_values = gradient_values[::-1]
@@ -258,9 +243,9 @@ class AdadeltaOptimizer(Optimizer):
             self.last_weights_grad_cache[index] = self.decay_rate * self.last_weights_grad_cache[index] + (1 - self.decay_rate) * weight_update**2
             self.last_biases_grad_cache[index] = self.decay_rate * self.last_biases_grad_cache[index] + (1 - self.decay_rate) * bias_update**2
 
-            if self.last_epoch_weights_grad_cache is not None and self.last_epoch_biases_grad_cache is not None:
-                weight_update = weight_update / (np.sqrt(self.last_epoch_weights_grad_cache[index] + self.epsilon))
-                bias_update = bias_update / (np.sqrt(self.last_epoch_biases_grad_cache[index] + self.epsilon))
+            if self.last_weights_grad_cache is not None and self.last_biases_grad_cache is not None:
+                weight_update = weight_update / (np.sqrt(self.last_weights_grad_cache[index] + self.epsilon))
+                bias_update = bias_update / (np.sqrt(self.last_biases_grad_cache[index] + self.epsilon))
             
             updated_weights[index] = weights[index] - (self.learning_rate * weight_update)
             updated_biases[index] = biases[index] - (self.learning_rate * bias_update)

@@ -15,6 +15,7 @@ class MLP():
                  max_acceptable_error = 0.01,
                  max_acceptable_val_error_diff = 0.1,
                  max_training_time = 600,
+                 accuracy_to_achieve = 1,
                  batch_size = None,
                  weight_min = -1,
                  weight_max = 1,
@@ -29,6 +30,7 @@ class MLP():
         self.max_acceptable_error = max_acceptable_error
         self.max_acceptable_val_error_diff = max_acceptable_val_error_diff
         self.max_training_time = max_training_time
+        self.accuracy_to_achieve = accuracy_to_achieve
         self.batch_size = batch_size
 
         self.weight_min = weight_min
@@ -219,6 +221,7 @@ class MLP():
         global_error = np.inf
         batch_start = 0
         previous_parameters = []
+        accuracy_goal_epoch = None
 
         while self.max_acceptable_error < global_error and epochs < self.max_epochs:
             epochs += 1
@@ -246,10 +249,12 @@ class MLP():
             
             losses.append(global_error)
             
+            Y_pred = np.argmax(self.predict(X_train), axis=1)
+            Y_test = np.argmax(Y_train, axis=1)
+            accuracy = accuracy_score(Y_pred, Y_test)
+            
             if self.verbose:
-                # Y_pred = np.argmax(self.predict(X_train), axis=1)
-                # Y_test = np.argmax(Y_train, axis=1)
-                # print(f'Global accuracy score after {epochs}: {accuracy_score(Y_pred, Y_test)}')
+                print(f'Global accuracy score after {epochs}: {accuracy}')
                 # print(f'Global classification loss after {epochs} epochs: {classification_error(Y_pred, Y_test)}')
                 print(f'Global loss after {epochs} epochs: {global_error}. ', end='')
             
@@ -271,22 +276,31 @@ class MLP():
                         self.weights = min_error_params['weights']
                         self.biases = min_error_params['biases']
                         
+                        accuracy_goal_epoch = epochs if accuracy_goal_epoch is None else accuracy_goal_epoch
+                        
                         if self.verbose:
                             print()
-                        return epochs, losses, val_losses, current_training_time
+                        return epochs, losses, val_losses, current_training_time, accuracy_goal_epoch
                 
                 parameters = { 'val_error': val_error, 'weights': [weight.copy() for weight in self.weights], 'biases': [bias.copy() for bias in self.biases]}
                 previous_parameters.append(parameters)
+                
+            if accuracy >= self.accuracy_to_achieve and accuracy_goal_epoch is None:
+                if self.verbose:
+                    print('Success!')
+                accuracy_goal_epoch = epochs
             
             if current_training_time > self.max_training_time:
+                accuracy_goal_epoch = epochs if accuracy_goal_epoch is None else accuracy_goal_epoch
                 if self.verbose:
                     print()
-                return epochs, losses, val_losses, current_training_time
+                return epochs, losses, val_losses, current_training_time, accuracy_goal_epoch
             
             if self.verbose:
                 print()
         
-        return epochs, losses, val_losses, current_training_time
+        accuracy_goal_epoch = epochs if accuracy_goal_epoch is None else accuracy_goal_epoch
+        return epochs, losses, val_losses, current_training_time, accuracy_goal_epoch
 
     def predict(self, X):
         result, _ = self.feed_forward(X)
@@ -369,7 +383,7 @@ if __name__ == '__main__':
     #optimizer = MomentumOptimizer(learning_rate=0.01, momentum_rate=0.9) #TODO: verify
     #optimizer = NesterovMomentumOptimizer(learning_rate=0.01, momentum_rate=0.9)
     #optimizer = AdagradOptimizer(epsilon=1e-8)#(epsilon=1e-8)
-    #optimizer = AdadeltaOptimizer(epsilon=1e-4)#(epsilon=1e-8)
+    #optimizer = AdadeltaOptimizer(epsilon=1e-8)#(epsilon=1e-8)
     optimizer = AdamOptimizer()#(epsilon=1e-8)
     
     model = MLP(#learning_rate = 0.01,
@@ -377,17 +391,18 @@ if __name__ == '__main__':
                  sigma = 0.1,
                  max_acceptable_error = 0.001,
                  max_acceptable_val_error_diff = 0.1,
-                 max_training_time = 3360,
-                 batch_size = 1000,
+                 max_training_time = 3600,
+                 accuracy_to_achieve = 1,
+                 batch_size = 300,
                  optimizer = optimizer,
-                 weight_init_method = 'he',
+                 weight_init_method = '',
                  debug = False,
                  verbose = True
     )
 
     architecture = [
         {'layer_dim': X_train.shape[1] },
-        {'layer_dim': 100, 'activation': 'relu'},
+        {'layer_dim': 350, 'activation': 'relu'},
         {'layer_dim': n_outputs, 'activation': 'softmax'}
     ]
 
