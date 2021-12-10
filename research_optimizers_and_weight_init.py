@@ -14,13 +14,13 @@ import time
 
 sns.set()
 
-REPETITIONS = 5
+REPETITIONS = 10
 MAX_EPOCHS = 50
 MAX_ACCEPTABLE_ERROR = 0.0001
 MAX_ACCEPTABLE_VAL_ERROR_DIFF = 0.15
 MAX_TRAINING_TIME = 3600
 MAX_ACCURACY = 0.96
-DSET_SIZE = 10000
+DSET_SIZE = 60000
 
 def get_datasets(val_dset_size):
     X_train, Y_train = load_mnist_data('train-images.idx3-ubyte', 'train-labels.idx1-ubyte', flatten=True)
@@ -247,7 +247,7 @@ if __name__ == '__main__':
 
     """BADANIE 1 """
     run_research_1(X_train, X_val, Y_train, Y_val, act_function='relu')
-    run_research_1(X_train, X_val, Y_train, Y_val, act_function='sigmoid')
+    # run_research_1(X_train, X_val, Y_train, Y_val, act_function='sigmoid')
     
     """BADANIE 2 """
     #run_research_2(X_train, X_val, Y_train, Y_val, act_function='relu')
