@@ -11,8 +11,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 EPOCHS = 25
-BATCH_SIZE = 100
-SAMPLES = 2
+BATCH_SIZE = 300
+SAMPLES = 4
 
 def mean(a):
     return sum(a) / len(a)
