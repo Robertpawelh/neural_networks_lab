@@ -48,21 +48,23 @@ def research_1(X_train, Y_train, X_val, Y_val, verbose=False):
         accuracies_param.append(accuracy)
         losses_param.append(history.history['loss'])
     
-    accuracy = np.mean(accuracies_param)
+
     losses = np.mean(np.array(losses_param), axis=0)
     plt.plot(losses)
     plt.xlabel(f'Numer epoki')
     plt.ylabel('Wartość funkcji straty')
     plt.title((f'Zależność wartości funkcji straty zbioru od epoki dla MLP'))
     with open('results/mlp_accuracies.txt', 'w') as f:
-        accuracy = model.evaluate(X_val, Y_val, verbose=2)
-        f.write(str(accuracy))
+        accuracy = np.mean(accuracies_param)
+        std = np.mean(accuracies_param)
+        f.write(f'ACC: {accuracy}, STD: {std}')
     plt.savefig(f'results/mlp_loss.png', bbox_inches='tight')
     plt.clf()
     plt.cla()
 
 def research_2(X_train, Y_train, X_val, Y_val, poolings, x_labels, verbose=False):
     accuracies = []
+    stds = []
     plt.xlabel(f'Numer epoki')
     plt.ylabel('Wartość funkcji straty')
 
@@ -78,6 +80,9 @@ def research_2(X_train, Y_train, X_val, Y_val, poolings, x_labels, verbose=False
             losses_param.append(history.history['loss'])
         
         accuracy = np.mean(accuracies_param)
+        std = np.std(accuracies_param)
+        accuracies.append(accuracy)
+        stds.append(std)
         accuracies.append(accuracy)
         losses = np.mean(np.array(losses_param), axis=0)
         
@@ -89,7 +94,7 @@ def research_2(X_train, Y_train, X_val, Y_val, poolings, x_labels, verbose=False
     plt.title((f'Zależność wartości funkcji straty zbioru od metody poolingu na przestrzeni epok'))
     plt.legend()    
     with open('results/pooling_accuracies.txt', 'w') as f:
-        f.write(str(accuracies))
+        f.write(f'ACC: {accuracies}, STD: {stds}')
 
     plt.savefig(f'results/pooling_loss.png', bbox_inches='tight')
     plt.clf()
@@ -99,6 +104,7 @@ def research_2(X_train, Y_train, X_val, Y_val, poolings, x_labels, verbose=False
 
 def research_3(X_train, Y_train, X_val, Y_val, filters, verbose=False):
     accuracies = []
+    stds = []
     plt.xlabel(f'Numer epoki')
     plt.ylabel('Wartość funkcji straty')
 
@@ -116,7 +122,9 @@ def research_3(X_train, Y_train, X_val, Y_val, filters, verbose=False):
             losses_param.append(history.history['loss'])
         
         accuracy = np.mean(accuracies_param)
+        std = np.std(accuracies_param)
         accuracies.append(accuracy)
+        stds.append(std)
         losses = np.mean(np.array(losses_param), axis=0)
         #print(losses_param)
         #losses = [np.mean([loss[index] for loss in losses_param] for index in range(len(losses_param[0])))]
@@ -127,7 +135,7 @@ def research_3(X_train, Y_train, X_val, Y_val, filters, verbose=False):
     
     print(accuracies)
     with open('results/filter_accuracies.txt', 'w') as f:
-        f.write(str(accuracies))
+        f.write(f'ACC: {accuracies}, STD: {stds}')
     plt.legend()
     plt.savefig(f'results/filter_loss.png', bbox_inches='tight')
     # plt.show()
@@ -136,6 +144,7 @@ def research_3(X_train, Y_train, X_val, Y_val, filters, verbose=False):
 
 def research_4(X_train, Y_train, X_val, Y_val, kernels, verbose=False):
     accuracies = []
+    stds = []
     plt.xlabel(f'Numer epoki')
     plt.ylabel('Wartość funkcji straty')
 
@@ -152,6 +161,9 @@ def research_4(X_train, Y_train, X_val, Y_val, kernels, verbose=False):
                 
         accuracy = np.mean(accuracies_param)
         accuracies.append(accuracy)
+        std = np.std(accuracies_param)
+        accuracies.append(accuracy)
+        stds.append(std)
         print(losses_param)
         losses = np.mean(np.array(losses_param), axis=0)
             
@@ -162,7 +174,7 @@ def research_4(X_train, Y_train, X_val, Y_val, kernels, verbose=False):
     
     print(accuracies)
     with open('results/kernel_accuracies.txt', 'w') as f:
-        f.write(str(accuracies))
+        f.write(f'ACC: {accuracies}, STD: {stds}')
     plt.legend()
     plt.savefig(f'results/kernel_loss.png', bbox_inches='tight')
     # plt.show()
@@ -175,15 +187,15 @@ if __name__ == '__main__':
     X_train, Y_train = load_mnist_data('train-images.idx3-ubyte', 'train-labels.idx1-ubyte', flatten=False)#('AND_bi_train_dset.csv')
     X_train = scale_min_max_data(X_train)
     
-    X_train = X_train[0:85]
-    Y_train = Y_train[0:85]
+    X_train = X_train[0:8500]
+    Y_train = Y_train[0:8500]
 
 
     X_test, Y_test = load_mnist_data('t10k-images.idx3-ubyte', 't10k-labels.idx1-ubyte', flatten=False)
     X_test = scale_min_max_data(X_test)
     
-    X_test = X_test[0:150]
-    Y_test = Y_test[0:150]
+    X_test = X_test[0:1500]
+    Y_test = Y_test[0:1500]
 
     X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], X_train.shape[2], 1))
     X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], X_test.shape[2],1)) 
@@ -191,8 +203,8 @@ if __name__ == '__main__':
     poolings = [None, AveragePooling2D(2, 2), MaxPooling2D(2, 2)]
     filters = [2**k for k in range(7)]
     kernel_sizes = [[k, k] for k in range(1, 5)]
-    #research_1(X_train, Y_train, X_test, Y_test)
+    research_1(X_train, Y_train, X_test, Y_test)
     research_2(X_train, Y_train, X_test, Y_test, poolings, x_labels=['Brak', 'Average pooling', 'Max pooling'])
-    #research_3(X_train, Y_train, X_test, Y_test, filters)
+    research_3(X_train, Y_train, X_test, Y_test, filters)
     #research_4(X_train, Y_train, X_test, Y_test, kernel_sizes)
     #research_2(X_train, Y_train, X_test, Y_test, poolings)
