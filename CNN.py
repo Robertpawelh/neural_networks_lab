@@ -12,7 +12,7 @@ import numpy as np
 
 EPOCHS = 25
 BATCH_SIZE = 300
-SAMPLES = 4
+SAMPLES = 2
 
 def mean(a):
     return sum(a) / len(a)
@@ -44,7 +44,7 @@ def research_1(X_train, Y_train, X_val, Y_val, verbose=False):
         model = mlp_architecture()
         model.compile(optimizer='adam', loss=keras.losses.SparseCategoricalCrossentropy(from_logits=False), metrics=['accuracy'])
         history = model.fit(X_train, Y_train, batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=verbose)
-        accuracy = model.evaluate(X_val, Y_val, verbose=2)
+        accuracy = model.evaluate(X_val, Y_val, verbose=2)[-1]
         accuracies_param.append(accuracy)
         losses_param.append(history.history['loss'])
     
@@ -75,7 +75,7 @@ def research_2(X_train, Y_train, X_val, Y_val, poolings, x_labels, verbose=False
             model = conv_architecture(pooling=pooling)
             model.compile(optimizer='adam', loss=keras.losses.SparseCategoricalCrossentropy(from_logits=False), metrics=['accuracy'])
             history = model.fit(X_train, Y_train, batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=verbose)
-            accuracy = model.evaluate(X_val, Y_val, verbose=2)
+            accuracy = model.evaluate(X_val, Y_val, verbose=2)[-1]
             accuracies_param.append(accuracy)
             losses_param.append(history.history['loss'])
         
@@ -117,11 +117,12 @@ def research_3(X_train, Y_train, X_val, Y_val, filters, verbose=False):
             history = model.fit(X_train, Y_train, batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=verbose)
             # cnn_pool_results = model.evaluate(X_val, Y_val, batch_size=BATCH_SIZE, verbose=2)
 
-            accuracy = model.evaluate(X_val, Y_val, verbose=2)
+            accuracy = model.evaluate(X_val, Y_val, verbose=2)[-1]
             accuracies_param.append(accuracy)
             losses_param.append(history.history['loss'])
         
         accuracy = np.mean(accuracies_param)
+        print(accuracies_param)
         std = np.std(accuracies_param)
         accuracies.append(accuracy)
         stds.append(std)
@@ -155,7 +156,7 @@ def research_4(X_train, Y_train, X_val, Y_val, kernels, verbose=False):
             model = conv_architecture(kernel=kernel)
             model.compile(optimizer='adam', loss=keras.losses.SparseCategoricalCrossentropy(from_logits=False), metrics=['accuracy'])
             history = model.fit(X_train, Y_train, batch_size=BATCH_SIZE, epochs=EPOCHS, verbose=verbose)
-            accuracy = model.evaluate(X_val, Y_val, verbose=2)
+            accuracy = model.evaluate(X_val, Y_val, verbose=2)[-1]
             accuracies_param.append(accuracy)
             losses_param.append(history.history['loss'])
                 
@@ -164,7 +165,7 @@ def research_4(X_train, Y_train, X_val, Y_val, kernels, verbose=False):
         std = np.std(accuracies_param)
         accuracies.append(accuracy)
         stds.append(std)
-        print(losses_param)
+        print(accuracies_param)
         losses = np.mean(np.array(losses_param), axis=0)
             
         print(f'CNN with {kernel} kernel: {accuracy}')
@@ -187,8 +188,8 @@ if __name__ == '__main__':
     X_train, Y_train = load_mnist_data('train-images.idx3-ubyte', 'train-labels.idx1-ubyte', flatten=False)#('AND_bi_train_dset.csv')
     X_train = scale_min_max_data(X_train)
     
-    X_train = X_train[0:8500]
-    Y_train = Y_train[0:8500]
+    X_train = X_train[0:6500]
+    Y_train = Y_train[0:6500]
 
 
     X_test, Y_test = load_mnist_data('t10k-images.idx3-ubyte', 't10k-labels.idx1-ubyte', flatten=False)
