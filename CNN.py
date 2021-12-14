@@ -175,15 +175,15 @@ if __name__ == '__main__':
     X_train, Y_train = load_mnist_data('train-images.idx3-ubyte', 'train-labels.idx1-ubyte', flatten=False)#('AND_bi_train_dset.csv')
     X_train = scale_min_max_data(X_train)
     
-    X_train = X_train[0:8500]
-    Y_train = Y_train[0:8500]
+    X_train = X_train[0:85]
+    Y_train = Y_train[0:85]
 
 
     X_test, Y_test = load_mnist_data('t10k-images.idx3-ubyte', 't10k-labels.idx1-ubyte', flatten=False)
     X_test = scale_min_max_data(X_test)
     
-    X_test = X_test[0:1500]
-    Y_test = Y_test[0:1500]
+    X_test = X_test[0:150]
+    Y_test = Y_test[0:150]
 
     X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], X_train.shape[2], 1))
     X_test = X_test.reshape((X_test.shape[0], X_test.shape[1], X_test.shape[2],1)) 
@@ -191,8 +191,8 @@ if __name__ == '__main__':
     poolings = [None, AveragePooling2D(2, 2), MaxPooling2D(2, 2)]
     filters = [2**k for k in range(7)]
     kernel_sizes = [[k, k] for k in range(1, 5)]
-    research_1(X_train, Y_train, X_test, Y_test)
+    #research_1(X_train, Y_train, X_test, Y_test)
     research_2(X_train, Y_train, X_test, Y_test, poolings, x_labels=['Brak', 'Average pooling', 'Max pooling'])
-    research_3(X_train, Y_train, X_test, Y_test, filters)
-    research_4(X_train, Y_train, X_test, Y_test, kernel_sizes)
-    research_2(X_train, Y_train, X_test, Y_test, poolings)
+    #research_3(X_train, Y_train, X_test, Y_test, filters)
+    #research_4(X_train, Y_train, X_test, Y_test, kernel_sizes)
+    #research_2(X_train, Y_train, X_test, Y_test, poolings)
